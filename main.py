@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 import hashlib
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 import os
 import pytube # python3 -m pip install pytube
 import random
@@ -66,7 +66,7 @@ class MyServer(BaseHTTPRequestHandler):
         g.video_type = vid_mime#
         
         download_video = True
-        if os.path.isfile(vid_dir) and os.path.isfile(vid_duration_dir):
+        if os.path.isfile(vid_dir) and os.path.isfile(vid_duration_dir): # TODO this doesn't work
             print('video in cache')
             f = open(vid_duration_dir)
             vid_duration = f.read()
@@ -96,6 +96,9 @@ class MyServer(BaseHTTPRequestHandler):
         g.video_starts_at = time.time()
         g.video_ends_at = g.video_starts_at + float_vid_duration
 
+    def send_the_stupid_chrome_header(s):
+        s.send_header('Accept-Ranges', 'bytes=0-1') # used to be `0-100`
+
     # methods
 
     def do_GET(s):
@@ -103,7 +106,7 @@ class MyServer(BaseHTTPRequestHandler):
         if s.path == '/':
             s.send_response(200)
             s.send_header('Content-type', 'text/html')
-            s.send_header('Accept-Ranges', 'bytes=0-100')
+            s.send_the_stupid_chrome_header()
             s.end_headers()
 
             with open(f'{HERE}/responses/video-streaming.html', 'rb') as f:
@@ -113,7 +116,7 @@ class MyServer(BaseHTTPRequestHandler):
             with open(f'{HERE}/{s.path}', 'rb') as f:
                 s.send_response(200)
                 #s.send_header('Content-type', 'video/mp4') # TODO read this from a file
-                s.send_header('Accept-Ranges', 'bytes=0-100')
+                s.send_the_stupid_chrome_header()
                 s.end_headers()
 
                 s.wfile.write(f.read())
@@ -122,7 +125,7 @@ class MyServer(BaseHTTPRequestHandler):
 
             s.send_response(200)
             s.send_header('Content-type', 'text/html')
-            s.send_header('Accept-Ranges', 'bytes=0-100')
+            s.send_the_stupid_chrome_header()
             s.end_headers()
             s.wfile.write(bytes('<html><head><title>https://pythonbasics.org</title></head>', 'utf-8'))
             s.wfile.write(bytes('<p>Request: %s</p>' % s.path, 'utf-8'))
@@ -168,14 +171,14 @@ class MyServer(BaseHTTPRequestHandler):
         print(f'{resp=}')
 
         s.send_response(200)
-        s.send_header('Accept-Ranges', 'bytes=0-100')
+        s.send_the_stupid_chrome_header()
         s.end_headers()
 
         s.send_str(resp)
     
     def do_VOTE(s):
         s.send_response(200)
-        s.send_header('Accept-Ranges', 'bytes=0-100')
+        s.send_the_stupid_chrome_header()
         s.end_headers()
 
         assert s.path[0] == '/'
@@ -199,7 +202,7 @@ class MyServer(BaseHTTPRequestHandler):
 
     def do_GET_VOTES(s):
         s.send_response(200)
-        s.send_header('Accept-Ranges', 'bytes=0-100') # TODO fuck this and all other instances (fuck google chrome)
+        s.send_the_stupid_chrome_header() # TODO fuck this and all other instances (fuck google chrome)
         s.end_headers()
 
         # TODO this is giga shit
@@ -217,7 +220,7 @@ class MyServer(BaseHTTPRequestHandler):
 
 
 if __name__ == '__main__':        
-    webServer = HTTPServer((HOSTNAME, PORT), MyServer)
+    webServer = ThreadingHTTPServer((HOSTNAME, PORT), MyServer)
 
     webServer.socket = ssl.wrap_socket(
         webServer.socket, 
