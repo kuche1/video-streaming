@@ -97,7 +97,7 @@ class MyServer(BaseHTTPRequestHandler):
         g.video_ends_at = g.video_starts_at + float_vid_duration
 
     def send_the_stupid_chrome_header(s):
-        s.send_header('Accept-Ranges', 'bytes=0-1') # used to be `0-100`
+        s.send_header('Accept-Ranges', 'bytes=0-100')
 
     # methods
 
