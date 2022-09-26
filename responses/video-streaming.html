@@ -1,0 +1,350 @@
+
+<!DOCTYPE html>
+
+
+<html>
+	<head>
+		<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+	</head>
+
+	<style>
+		body {
+			background-color: #224422;
+		}
+		input {
+			background-color: #227722;
+		}
+	</style>
+<body id='body'>
+
+
+
+
+
+
+
+
+<script>
+
+//#presets
+
+function createElement(info){
+	return document.createElement(info)
+}
+	
+function coo(cname) {
+  var name = cname + "=";
+  var decodedCookie = decodeURIComponent(document.cookie);
+  var ca = decodedCookie.split(';');
+  for(var i = 0; i <ca.length; i++) {
+    var c = ca[i];
+    while (c.charAt(0) == ' ') {
+      c = c.substring(1);
+    }
+    if (c.indexOf(name) == 0) {
+      return c.substring(name.length, c.length);
+    }
+  }
+  return "";
+}
+
+function set(str){
+	document.cookie = str
+}
+
+function http_req(type,url,traceback){
+	var xmlHttp = new XMLHttpRequest()
+	xmlHttp.onreadystatechange=function(){
+		if(xmlHttp.readyState==4 && xmlHttp.status==200){
+			traceback(xmlHttp.responseText)
+		}
+	}
+	xmlHttp.open(type,url,true)
+	xmlHttp.send()
+}
+
+function send(str,data,traceback){
+	http_req(encodeURIComponent(str), encodeURIComponent(data), traceback)
+}
+
+anon = function(){}
+
+br = createElement('br')
+
+
+// fucking cancer shit
+browser_is_chromium_based = !!window.chrome
+
+
+//#video
+
+video = createElement('video')
+
+video.controls = 1
+video.volume = coo('volume')
+if(browser_is_chromium_based){
+	video.muted = 1 // chrome is a bitch
+}
+
+video.onvolumechange = function(new_vol){
+	set('volume='+new_vol.target.volume)
+}
+
+if(!coo('width')){set('width=400')}
+if(!coo('height')){set('height=400')}
+
+video.width = coo('width')
+video.height = coo('height')
+
+if(!coo('autoplay')){set('autoplay=1')}
+
+video.onended = function(){
+	if(coo('autoplay') == '1'){
+		change_video_to_latest()
+	}
+}
+
+body.appendChild(video)
+
+
+
+function fix_video_time(new_time,on_done_func=anon){
+	if(video.readyState==4){
+		video.currentTime = new_time // fucking chrome sets this to 0 no matter what u use # solution: use `Accept-Ranges` and set them to `bytes=0-100`
+		range = 0.1 // fuck chrome
+		if((video.currentTime + range > new_time) && (video.currentTime - range < new_time)){
+			return on_done_func()
+		}
+	}
+	setTimeout(function(){
+		fix_video_time(new_time,on_done_func)
+	},100)
+}
+
+function change_video_to_latest(on_done_func=anon){
+	send('GET_VIDEO_DIR_AND_TIME_AND_TYPE', '', function(r){
+		r = r.split(';')
+		console.log(r)
+		video_source.type = r[2]
+		video_source.src = r[0]
+		video.load()
+		
+		if(!coo('start-video-from-the-beginning')){
+			fix_video_time(Number(r[1]),function(){
+				video.play()
+				on_done_func()
+			})
+		}else{
+			video.play()
+			on_done_func()
+		}
+	})
+}
+
+video_source = createElement('source')
+
+video.appendChild(video_source)
+
+change_video_to_latest()
+
+
+
+body.appendChild(createElement('br'))
+
+
+//#votes
+
+lbl_vote = createElement('input')
+lbl_vote.size = 200
+
+
+btn_vote = createElement('input')
+btn_vote.value = 'send'
+btn_vote.type = 'submit'
+
+btn_vote.onclick = function(){
+	btn_vote.disabled = true
+	var request = lbl_vote.value
+	lbl_vote.value = 'processing request...'
+	send('VOTE', request, function(r){
+		lbl_vote.value = r
+		btn_vote.disabled = false
+	})
+}
+
+lbl_vote.addEventListener('keypress', function(e) {
+  if (e.which == 13) {
+    btn_vote.onclick()
+  }
+});
+
+body.appendChild(lbl_vote)
+
+body.appendChild(btn_vote)
+
+
+
+//#autoplay
+
+
+lbl_autoplay = createElement('p')
+
+function update_autoplay_text(){
+	lbl_autoplay.textContent = 'Autoplay next video on video end: '
+	if(coo('autoplay')=='1'){
+		lbl_autoplay.textContent += 'on'
+		btn_autoplay.value = 'Disable'
+	}else{
+		lbl_autoplay.textContent += 'off'
+		btn_autoplay.value = 'Enable'
+	}
+	btn_autoplay.value += ' autoplay'
+}
+
+body.appendChild(lbl_autoplay)
+
+btn_autoplay = createElement('input')
+btn_autoplay.type = 'submit'
+
+btn_autoplay.onclick = function(){
+	if(coo('autoplay')=='1'){
+		set('autoplay=0')
+	}else{
+		set('autoplay=1')
+		if(video.ended){
+			change_video_to_latest()
+		}
+		
+	}
+	update_autoplay_text()
+}
+
+update_autoplay_text()
+
+body.appendChild(btn_autoplay)
+
+body.appendChild(br)
+
+//#start songs at the start or continue where left off
+
+lbl_start_at_the_beginning = createElement('p')
+
+function update_start_at_the_beginning_text(){
+	lbl_start_at_the_beginning.textContent = 'Start playing from the very beginning: '
+	if (coo('start-video-from-the-beginning')){
+		lbl_start_at_the_beginning.textContent += 'yes'
+		btn_start_at_the_beginning.value = 'Disable'
+	}else{
+		lbl_start_at_the_beginning.textContent += 'no'
+		btn_start_at_the_beginning.value = 'Enable'
+	}
+	btn_start_at_the_beginning.value +=  ' start from the beginning'
+}
+
+
+
+
+btn_start_at_the_beginning = createElement('input')
+btn_start_at_the_beginning.type = 'submit'
+
+btn_start_at_the_beginning.onclick = function(){
+	if(coo('start-video-from-the-beginning')){
+		set('start-video-from-the-beginning=')
+	}else{
+		set('start-video-from-the-beginning=1')
+	}
+	update_start_at_the_beginning_text()
+}
+
+
+update_start_at_the_beginning_text()
+
+body.appendChild(lbl_start_at_the_beginning)
+
+body.appendChild(btn_start_at_the_beginning)
+
+
+
+
+
+body.appendChild(br)
+
+
+
+//#resize video
+
+temp = createElement('p')
+temp.textContent = 'video size X'
+body.appendChild(temp)
+
+inp_sizex = createElement('input')
+inp_sizex.size = 50
+inp_sizex.value = coo('width')
+
+inp_sizex.onchange = function(n){
+	n = n.target.value
+	video.width = n
+	set('width='+n)
+}
+
+body.appendChild(inp_sizex)
+
+
+
+
+temp = createElement('p')
+temp.textContent = 'video size Y'
+body.appendChild(temp)
+
+
+inp_sizey = createElement('input')
+inp_sizey.size = 50
+inp_sizey.value = coo('height')
+
+inp_sizey.onchange = function(n){
+	n = n.target.value
+	video.height = n
+	set('height='+n)
+}
+
+body.appendChild(inp_sizey)
+
+
+
+
+
+// show what are the current votes
+tmp = createElement('p')
+tmp.textContent = 'Votes:'
+body.appendChild(tmp)
+
+user_votes = createElement('p')
+tmp.appendChild(user_votes)
+
+// periodically update the votes
+setInterval(function(){
+		send('GET_VOTES', '', function(r){
+
+			r = r.split('\n')
+			console.log(r)
+			
+			user_votes.innerHTML = ''
+			r.forEach(item => {
+				tmp = createElement('p')
+				tmp.textContent = item
+				user_votes.appendChild(tmp)
+			})
+		})
+	},5000
+)
+
+
+
+</script>
+
+
+
+
+
+</body>
+</html>
