@@ -59,8 +59,8 @@ class MyServer(BaseHTTPRequestHandler):
         hashed_url = s.hash(url)
 
         vid_mime = 'video/mp4'
-        vid_dir = f'cache/{hashed_url}'+'.mp4' # TODO do not use `cache` folder, use tmp files instead
-        vid_duration_dir = vid_dir+'_length'
+        vid_dir = f'/cache/{hashed_url}'+'.mp4' # TODO do not use `cache` folder, use tmp files instead
+        vid_duration_dir = f'{HERE}/{vid_dir}_length' # TODO might be dangerous
         
         g.video_dir = vid_dir#
         g.video_type = vid_mime#
