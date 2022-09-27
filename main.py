@@ -17,6 +17,9 @@ HOSTNAME = ''
 PORT = 8085
 HASHING_ALG = hashlib.sha512
 
+KEYFILE  = os.path.join(HERE, 'certs', 'private.key') # os.path.join(HERE, 'certs', 'new-certs', 'server.key')
+CERTFILE = os.path.join(HERE, 'certs', 'selfsigned.crt') # os.path.join(HERE, 'certs', 'new-certs', 'server.crt')
+
 MAX_VOTES_PER_VIDEO = 3
 
 class g:
@@ -224,8 +227,8 @@ if __name__ == '__main__':
 
     webServer.socket = ssl.wrap_socket(
         webServer.socket, 
-        keyfile=os.path.join(HERE, 'certs', 'private.key'),
-        certfile=os.path.join(HERE, 'certs', 'selfsigned.crt'),
+        keyfile=KEYFILE,
+        certfile=CERTFILE,
         server_side=True,
     )
 

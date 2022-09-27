@@ -1,8 +1,7 @@
 #! /usr/bin/env python3
 
 from OpenSSL import crypto, SSL # python3 -m pip install pyopenssl
-from socket import gethostname
-from pprint import pprint
+import requests
 from time import gmtime, mktime
 
 CERT_FILE = "selfsigned.crt"
@@ -20,16 +19,15 @@ def create_self_signed_cert():
     cert.get_subject().C = "UK"
     cert.get_subject().ST = "London"
     cert.get_subject().L = "London"
-    cert.get_subject().O = "Dummy Company Ltd 2"
-    cert.get_subject().OU = "Dummy Company Ltd 2"
-    cert.get_subject().CN = gethostname()
+    cert.get_subject().O = "a Dummy Company Ltd 4"
+    cert.get_subject().OU = "a Dummy Company Ltd 4"
+    cert.get_subject().CN = requests.get('https://api.ipify.org').content.decode('utf8') # socket.gethostname()
     cert.set_serial_number(1000)
     cert.gmtime_adj_notBefore(0)
     cert.gmtime_adj_notAfter(10*365*24*60*60)
     cert.set_issuer(cert.get_subject())
     cert.set_pubkey(k)
-    cert.sign(k, 'sha1')
-
+    cert.sign(k, 'sha512')
     
     dumped_cert = crypto.dump_certificate(crypto.FILETYPE_PEM, cert)
     f = open(CERT_FILE, "wb")
