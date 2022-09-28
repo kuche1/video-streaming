@@ -124,6 +124,10 @@ class MyServer(BaseHTTPRequestHandler):
                 s.end_headers()
 
                 s.wfile.write(f.read())
+        
+        # elif s.path == '/.well-known/pki-validation/D4B8E1E7B2BF9B1966D90D425DA0BEDB.txt':
+        #     with open(f'{HERE}/cache/sex', 'rb') as f:
+        #         s.wfile.write(f.read())
 
         else:
 
@@ -227,24 +231,44 @@ if __name__ == '__main__':
     hostname = settings.hostname
     port = settings.port
 
-    webServer = ThreadingHTTPServer((hostname, port), MyServer)
+    if settings.use_threading:
+        ServerType = ThreadingHTTPServer
+    else:
+        ServerType = HTTPServer
 
-    if settings.use_ssl:
-        webServer.socket = ssl.wrap_socket(
-            webServer.socket, 
+    servers = []
+
+    for port in settings.run_http_on_ports:
+        srv = ServerType((hostname, port), MyServer)
+        srv.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        servers.append(srv)
+        print(f'running server on `http://{hostname}:{port}`')
+    
+    for port in settings.run_https_on_ports:
+        srv = ServerType((hostname, port), MyServer)
+        srv.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        srv.socket = ssl.wrap_socket(
+            srv.socket, 
             keyfile=settings.ssl_keyfile,
             certfile=settings.ssl_certfile,
             server_side=True,
         )
+        servers.append(srv)
+        print(f'running server on `https://{hostname}:{port}`')
 
-    webServer.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-    print(f'running on `{hostname}:{port}`')
+    for srv in servers:
+        threading.Thread(target=lambda:srv.serve_forever()).start()
 
     try:
-        webServer.serve_forever()
+        while True:
+            time.sleep(60)
     except KeyboardInterrupt:
         pass
+    
+    print('shutting down...')
 
-    webServer.server_close()
-    print('stopped')
+    # TODO this doesn't work and needs to be fixed
+    for srv in servers:
+        srv.server_close()
+    
+    print('shut down!')
