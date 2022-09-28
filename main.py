@@ -11,14 +11,11 @@ import time
 import threading
 import urllib
 
+import settings
+
 HERE = os.path.dirname(os.path.realpath(__file__))
 
-HOSTNAME = ''
-PORT = 8085
 HASHING_ALG = hashlib.sha512
-
-KEYFILE  = os.path.join(HERE, 'certs', 'private.key') # os.path.join(HERE, 'certs', 'new-certs', 'server.key')
-CERTFILE = os.path.join(HERE, 'certs', 'selfsigned.crt') # os.path.join(HERE, 'certs', 'new-certs', 'server.crt')
 
 MAX_VOTES_PER_VIDEO = 3
 
@@ -59,6 +56,10 @@ class MyServer(BaseHTTPRequestHandler):
             return 'Livestreams are not allowed'
 
     def change_video(s, url):
+
+        if not os.path.isdir('cache'):
+            os.mkdir('cache')
+
         hashed_url = s.hash(url)
 
         vid_mime = 'video/mp4'
@@ -223,18 +224,22 @@ class MyServer(BaseHTTPRequestHandler):
 
 
 if __name__ == '__main__':        
-    webServer = ThreadingHTTPServer((HOSTNAME, PORT), MyServer)
+    hostname = settings.hostname
+    port = settings.port
 
-    webServer.socket = ssl.wrap_socket(
-        webServer.socket, 
-        keyfile=KEYFILE,
-        certfile=CERTFILE,
-        server_side=True,
-    )
+    webServer = ThreadingHTTPServer((hostname, port), MyServer)
+
+    if settings.use_ssl:
+        webServer.socket = ssl.wrap_socket(
+            webServer.socket, 
+            keyfile=settings.ssl_keyfile,
+            certfile=settings.ssl_certfile,
+            server_side=True,
+        )
 
     webServer.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-    print(f'running on `https://{HOSTNAME}:{PORT}`')
+    print(f'running on `{hostname}:{port}`')
 
     try:
         webServer.serve_forever()
